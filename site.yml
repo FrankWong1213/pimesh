@@ -1,0 +1,31 @@
+---
+- name: Ad-hoc wireless cjdns mesh of Raspberry Pi's with automatic CouchDB replication
+  hosts: all
+  # accelerate: true
+  sudo: true
+
+  tasks:
+    - command: apt-get install -y python-apt creates=/usr/lib/pyshared/python2.7/apt_pkg.so
+    - command: apt-get install -y python-keyczar creates=/usr/share/pyshared/keyczar/keyczar.py
+
+    - apt: pkg=vim state=present
+    - apt: pkg=htop state=present
+    - apt: pkg=build-essential state=present
+
+    - modprobe: name=ipv6 state=present
+    - lineinfile: dest=/etc/modules line=ipv6 state=present
+
+    - hostname: name="{{ hostname }}"
+    - lineinfile: dest=/etc/hosts regexp='^127\.0\.1\.1' line="127.0.1.1 {{ hostname }}"
+
+    - get_url: url=http://nodejs.org/dist/v0.11.10/node-v0.11.10-linux-arm-pi.tar.gz dest=/opt/
+    - command: tar -x -C /opt/ -f /opt/node-v0.11.10-linux-arm-pi.tar.gz creates=/opt/node-v0.11.10-linux-arm-pi/
+    - shell: cp -R /opt/node-v0.11.10-linux-arm-pi/*/ /usr/local/ creates=/usr/local/bin/node
+
+    - git: repo=https://github.com/voltz/nacl4raspi.git dest=/opt/nacl4raspi/ update=no
+    - command: ./install.sh chdir=/opt/nacl4raspi/ creates=/usr/include/nacl/
+
+    - git: repo=https://github.com/cjdelisle/cjdns.git dest=/opt/cjdns/ update=no
+    - command: ./do chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute
+    - shell: ./cjdroute --genconf > ./cjdroute.conf chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute.conf
+    # - lineinfile: desc=/opt/cjdns/cjdroute.conf line=
