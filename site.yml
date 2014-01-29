@@ -5,6 +5,9 @@
   sudo: true
 
   tasks:
+    # - script: resize-rootfs.sh
+    - shell: dpkg --force-remove-essential -r sysvinit && apt-get install -y --force-yes upstart creates=/sbin/start
+    # - command: reboot
     - command: apt-get install -y python-apt creates=/usr/lib/pyshared/python2.7/apt_pkg.so
     - command: apt-get install -y python-keyczar creates=/usr/share/pyshared/keyczar/keyczar.py
 
@@ -34,4 +37,12 @@
 
     - git: repo=https://github.com/cjdelisle/cjdns.git dest=/opt/cjdns/ update=no
     - command: ./do chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute
-    - shell: ./cjdroute --genconf | ./cjdroute --cleanconf | jq '.interfaces.ETHInterface = [{"bind":"eth0","beacon":2,"connectTo":{}}]' > cjdroute.conf chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute.conf
+    - command: ln -s /opt/cjdns/cjdroute /usr/bin/cjdroute creates=/usr/bin/cjdroute
+    - shell: cjdroute --genconf | cjdroute --cleanconf | jq '.interfaces.ETHInterface = [{"bind":"eth0","beacon":2,"connectTo":{}}]' > /etc/cjdroute.conf creates=/etc/cjdroute.conf
+
+    - command: cp /opt/cjdns/contrib/upstart/cjdns.conf /etc/init/ creates=/etc/init/cjdns.conf
+    - service: name=cjdns state=started
+
+    # TODO gather ipv6 fact, couchdb, announce, replicate
+    # TODO make it fast
+    # TODO make it pretty
