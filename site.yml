@@ -43,6 +43,14 @@
     - command: cp /opt/cjdns/contrib/upstart/cjdns.conf /etc/init/ creates=/etc/init/cjdns.conf
     - service: name=cjdns state=started
 
-    # TODO gather ipv6 fact, couchdb, announce, replicate
+    - apt: pkg=couchdb state=present
+    - lineinfile: dest=/etc/couchdb/local.ini regexp='^;?bind_address' line="bind_address = {{ ansible_tun0.ipv6[0].address }}"
+      notify: restart couchdb
+
+    # TODO announce, replicate
     # TODO make it fast
     # TODO make it pretty
+
+  handlers:
+    - name: restart couchdb
+      service: name=couchdb state=restarted
