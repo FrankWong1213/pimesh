@@ -3,11 +3,20 @@
   hosts: all
   # accelerate: true
   sudo: true
+  vars:
+    rootfs_original_size: 2786648064
 
   tasks:
-    # - script: resize-rootfs.sh
+    - script: raspi-expand-rootfs.sh
+      when: rootfs_original_size == ansible_mounts[0].size_total
+      register: expand_rootfs
+
     - shell: dpkg --force-remove-essential -r sysvinit && apt-get install -y --force-yes upstart creates=/sbin/start
-    # - command: reboot
+      register: install_upstart
+
+    - include: tasks/reboot.yml
+      when: "not expand_rootfs.skipped or not install_upstart.skipped"
+
     - command: apt-get install -y python-apt creates=/usr/lib/pyshared/python2.7/apt_pkg.so
     - command: apt-get install -y python-keyczar creates=/usr/share/pyshared/keyczar/keyczar.py
 
@@ -44,6 +53,8 @@
     - service: name=cjdns state=started
 
     - apt: pkg=couchdb state=present
+    # XXX ansible_tun0 fact might not yet have been gathered
+    # - setup: filter=ansible_tun0
     - lineinfile: dest=/etc/couchdb/local.ini regexp='^;?bind_address' line="bind_address = {{ ansible_tun0.ipv6[0].address }}"
       notify: restart couchdb
 
