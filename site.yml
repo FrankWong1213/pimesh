@@ -7,6 +7,18 @@
     rootfs_original_size: 2786648064
 
   tasks:
+    - apt: pkg=avahi-autoipd state=present
+    - lineinfile: dest=/etc/dhcp/dhclient.conf regexp="^#?timeout " line="timeout 10;"
+    - lineinfile: dest=/etc/default/ifplugd regexp="^INTERFACES=" line="INTERFACES=eth0"
+      # XXX: figure out why this requires a reboot
+      # notify: restart ifplugd
+    - lineinfile: dest=/etc/default/ifplugd regexp="^HOTPLUG_INTERFACES=" line="HOTPLUG_INTERFACES=eth0"
+      # XXX: figure out why this requires a reboot
+      # notify: restart ifplugd
+    - copy: src=interfaces dest=/etc/network/interfaces
+      # XXX: figure out why this requires a reboot
+      # notify: ifupdown wlan0
+
     - script: raspi-expand-rootfs.sh
       when: rootfs_original_size == ansible_mounts[0].size_total
       register: expand_rootfs
@@ -55,9 +67,15 @@
     - command: ./do chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute
     - command: ln -s /opt/cjdns/cjdroute /usr/bin/cjdroute creates=/usr/bin/cjdroute
     - shell: cjdroute --genconf | cjdroute --cleanconf | jq '.interfaces.ETHInterface = [{"bind":"eth0","beacon":2,"connectTo":{}}]' > /etc/cjdroute.conf creates=/etc/cjdroute.conf
+    - shell: cat /etc/cjdroute.conf | jq -r '.admin.password'
+      register: cjdns_admin_password
+    - template: src=cjdnsadmin dest=/root/.cjdnsadmin
 
     - command: cp /opt/cjdns/contrib/upstart/cjdns.conf /etc/init/ creates=/etc/init/cjdns.conf
     - service: name=cjdns state=started
+    - copy: src=peers.sh dest=/opt/cjdns/ mode=0500
+    - file: dest=/opt/cjdns/peers.json state=touch mode=0644
+    - cron: name="Dump cjdns peers" cron_file=cjdns_peers job=/opt/cjdns/peers.sh user=root
 
     - apt: pkg=couchdb state=present
     # XXX ansible_tun0 fact might not yet have been gathered
@@ -76,6 +94,7 @@
     - lineinfile: dest=/etc/profile.d/chruby.sh line="chruby 2.1"
 
     # TODO announce, replicate
+    # TODO make it safe
     # TODO make it fast
     # TODO make it pretty
 
