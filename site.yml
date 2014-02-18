@@ -14,7 +14,7 @@
     - include: tasks/networking.yml
     - include: tasks/cjdns.yml
     - include: tasks/couchdb.yml
-    # - include: tasks/ruby.yml
+    - include: tasks/ruby.yml
 
     # TODO announce, replicate
     # TODO make it safe
