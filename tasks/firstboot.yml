@@ -2,7 +2,7 @@
 - hostname: name="{{ hostname }}"
 - lineinfile: dest=/etc/hosts regexp='^127\.0\.1\.1' line="127.0.1.1 {{ hostname }}"
 
-- script: raspi-expand-rootfs.sh
+- script: files/raspi-expand-rootfs.sh
   when: rootfs_original_size == ansible_mounts[0].size_total
   register: expand_rootfs
 
