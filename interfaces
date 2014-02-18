@@ -2,11 +2,10 @@ auto lo
 
 iface lo inet loopback
 iface eth0 inet dhcp
+iface default inet dhcp
 
 auto wlan0
-iface wlan0 inet dhcp
+iface wlan0 inet manual
     wireless-channel 11
     wireless-essid MYNETWORK
     wireless-mode ad-hoc
-
-iface default inet dhcp

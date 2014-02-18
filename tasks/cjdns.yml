@@ -1,0 +1,24 @@
+---
+- get_url: url=http://nodejs.org/dist/v0.10.24/node-v0.10.24-linux-arm-pi.tar.gz dest=/opt/
+- shell: tar -x -C /opt/ -f /opt/node-v0.10.24-linux-arm-pi.tar.gz && rm /usr/local/bin/node creates=/opt/node-v0.10.24-linux-arm-pi/
+- shell: cp -R /opt/node-v0.10.24-linux-arm-pi/*/ /usr/local/ creates=/usr/local/bin/node
+
+- git: repo=https://github.com/voltz/nacl4raspi.git dest=/opt/nacl4raspi/ update=no
+- command: ./install.sh chdir=/opt/nacl4raspi/ creates=/usr/include/nacl/
+
+- git: repo=https://github.com/stedolan/jq.git dest=/opt/jq/ update=no
+- shell: autoreconf -i && ./configure && make && make install chdir=/opt/jq/ creates=/usr/local/bin/jq
+
+- git: repo=https://github.com/cjdelisle/cjdns.git dest=/opt/cjdns/ update=no
+- command: ./do chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute
+- command: ln -s /opt/cjdns/cjdroute /usr/bin/cjdroute creates=/usr/bin/cjdroute
+- shell: cjdroute --genconf | cjdroute --cleanconf | jq '.interfaces.ETHInterface = [{"bind":"eth0","beacon":2,"connectTo":{}}]' > /etc/cjdroute.conf creates=/etc/cjdroute.conf
+- shell: cat /etc/cjdroute.conf | jq -r '.admin.password'
+  register: cjdns_admin_password
+- template: src=cjdnsadmin dest=/root/.cjdnsadmin
+
+- command: cp /opt/cjdns/contrib/upstart/cjdns.conf /etc/init/ creates=/etc/init/cjdns.conf
+- service: name=cjdns state=started
+- copy: src=peers.sh dest=/opt/cjdns/ mode=0500
+- file: dest=/opt/cjdns/peers.json state=touch mode=0644
+- cron: name="Dump cjdns peers" cron_file=cjdns_peers job=/opt/cjdns/peers.sh user=root

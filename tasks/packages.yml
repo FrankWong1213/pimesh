@@ -1,0 +1,20 @@
+---
+- command: apt-get install -y python-apt creates=/usr/lib/pyshared/python2.7/apt_pkg.so
+- command: apt-get install -y python-keyczar creates=/usr/share/pyshared/keyczar/keyczar.py
+- apt: pkg=python-pycurl state=present
+
+- apt_repository: repo="deb http://mirrordirector.raspbian.org/raspbian/ wheezy main contrib non-free rpi" state=absent
+- lineinfile: dest=/etc/apt/sources.list create=yes line="deb http://mirror.netcologne.de/raspbian/raspbian/ wheezy main contrib non-free rpi"
+  register: update_apt_sources
+- command: apt-get update
+  when: update_apt_sources.changed
+
+- apt: pkg=vim state=present
+- apt: pkg=htop state=present
+- apt: pkg=screen state=present
+
+- apt: pkg=build-essential state=present
+- apt: pkg=autoconf state=present
+- apt: pkg=libtool state=present
+- apt: pkg=bison state=present
+- apt: pkg=flex state=present

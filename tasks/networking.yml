@@ -1,0 +1,8 @@
+---
+- modprobe: name=ipv6 state=present
+- lineinfile: dest=/etc/modules line=ipv6 state=present
+
+- copy: src=interfaces dest=/etc/network/interfaces
+  register: ifdownup
+- shell: "ifdown wlan0 && sleep 2 && ifup wlan0"
+  when: ifdownup.changed

@@ -4,102 +4,19 @@
   # accelerate: true
   sudo: true
   vars:
+    # 2013-12-20-wheezy-raspbian.img
+    # 2014-01-07-wheezy-raspbian.img
     rootfs_original_size: 2786648064
 
   tasks:
-    - apt: pkg=avahi-autoipd state=present
-    - lineinfile: dest=/etc/dhcp/dhclient.conf regexp="^#?timeout " line="timeout 10;"
-    - lineinfile: dest=/etc/default/ifplugd regexp="^INTERFACES=" line="INTERFACES=eth0"
-      # XXX: figure out why this requires a reboot
-      # notify: restart ifplugd
-    - lineinfile: dest=/etc/default/ifplugd regexp="^HOTPLUG_INTERFACES=" line="HOTPLUG_INTERFACES=eth0"
-      # XXX: figure out why this requires a reboot
-      # notify: restart ifplugd
-    - copy: src=interfaces dest=/etc/network/interfaces
-      # XXX: figure out why this requires a reboot
-      # notify: ifupdown wlan0
-
-    - script: raspi-expand-rootfs.sh
-      when: rootfs_original_size == ansible_mounts[0].size_total
-      register: expand_rootfs
-
-    - shell: dpkg --force-remove-essential -r sysvinit && apt-get install -y --force-yes upstart creates=/sbin/start
-      register: install_upstart
-
-    - include: tasks/reboot.yml
-      when: "not expand_rootfs.skipped or not install_upstart.skipped"
-
-    - command: apt-get install -y python-apt creates=/usr/lib/pyshared/python2.7/apt_pkg.so
-    - command: apt-get install -y python-keyczar creates=/usr/share/pyshared/keyczar/keyczar.py
-    - apt: pkg=python-pycurl state=present
-
-    - apt_repository: repo="deb http://mirrordirector.raspbian.org/raspbian/ wheezy main contrib non-free rpi" state=absent
-    - lineinfile: dest=/etc/apt/sources.list create=yes line="deb http://mirror.netcologne.de/raspbian/raspbian/ wheezy main contrib non-free rpi"
-      notify: update apt sources
-
-    - apt: pkg=vim state=present
-    - apt: pkg=htop state=present
-    - apt: pkg=screen state=present
-
-    - apt: pkg=build-essential state=present
-    - apt: pkg=autoconf state=present
-    - apt: pkg=libtool state=present
-    - apt: pkg=bison state=present
-    - apt: pkg=flex state=present
-
-    - modprobe: name=ipv6 state=present
-    - lineinfile: dest=/etc/modules line=ipv6 state=present
-
-    - hostname: name="{{ hostname }}"
-    - lineinfile: dest=/etc/hosts regexp='^127\.0\.1\.1' line="127.0.1.1 {{ hostname }}"
-
-    - get_url: url=http://nodejs.org/dist/v0.10.24/node-v0.10.24-linux-arm-pi.tar.gz dest=/opt/
-    - shell: tar -x -C /opt/ -f /opt/node-v0.10.24-linux-arm-pi.tar.gz && rm /usr/local/bin/node creates=/opt/node-v0.10.24-linux-arm-pi/
-    - shell: cp -R /opt/node-v0.10.24-linux-arm-pi/*/ /usr/local/ creates=/usr/local/bin/node
-
-    - git: repo=https://github.com/voltz/nacl4raspi.git dest=/opt/nacl4raspi/ update=no
-    - command: ./install.sh chdir=/opt/nacl4raspi/ creates=/usr/include/nacl/
-
-    - git: repo=https://github.com/stedolan/jq.git dest=/opt/jq/ update=no
-    - shell: autoreconf -i && ./configure && make && make install chdir=/opt/jq/ creates=/usr/local/bin/jq
-
-    - git: repo=https://github.com/cjdelisle/cjdns.git dest=/opt/cjdns/ update=no
-    - command: ./do chdir=/opt/cjdns/ creates=/opt/cjdns/cjdroute
-    - command: ln -s /opt/cjdns/cjdroute /usr/bin/cjdroute creates=/usr/bin/cjdroute
-    - shell: cjdroute --genconf | cjdroute --cleanconf | jq '.interfaces.ETHInterface = [{"bind":"eth0","beacon":2,"connectTo":{}}]' > /etc/cjdroute.conf creates=/etc/cjdroute.conf
-    - shell: cat /etc/cjdroute.conf | jq -r '.admin.password'
-      register: cjdns_admin_password
-    - template: src=cjdnsadmin dest=/root/.cjdnsadmin
-
-    - command: cp /opt/cjdns/contrib/upstart/cjdns.conf /etc/init/ creates=/etc/init/cjdns.conf
-    - service: name=cjdns state=started
-    - copy: src=peers.sh dest=/opt/cjdns/ mode=0500
-    - file: dest=/opt/cjdns/peers.json state=touch mode=0644
-    - cron: name="Dump cjdns peers" cron_file=cjdns_peers job=/opt/cjdns/peers.sh user=root
-
-    - apt: pkg=couchdb state=present
-    # XXX ansible_tun0 fact might not yet have been gathered
-    # - setup: filter=ansible_tun0
-    - lineinfile: dest=/etc/couchdb/local.ini regexp='^;?bind_address' line="bind_address = {{ ansible_tun0.ipv6[0].address }}"
-      notify: restart couchdb
-
-    - git: repo=https://github.com/postmodern/ruby-install.git dest=/opt/ruby-install update=no
-    - shell: make && make install chdir=/opt/ruby-install creates=/usr/local/bin/ruby-install
-    - command: ruby-install ruby 2.1 creates=/opt/rubies/ruby-2.1.0/bin/ruby
-
-    - git: repo=https://github.com/postmodern/chruby.git dest=/opt/chruby update=no
-    - shell: make && make install chdir=/opt/chruby creates=/usr/local/bin/chruby-exec
-    - file: dest=/etc/profile.d/chruby.sh state=touch mode=0644
-    - lineinfile: dest=/etc/profile.d/chruby.sh create=yes line="source /usr/local/share/chruby/chruby.sh"
-    - lineinfile: dest=/etc/profile.d/chruby.sh line="chruby 2.1"
+    - include: tasks/firstboot.yml
+    - include: tasks/packages.yml
+    - include: tasks/networking.yml
+    # - include: tasks/cjdns.yml
+    # - include: tasks/couchdb.yml
+    # - include: tasks/ruby.yml
 
     # TODO announce, replicate
     # TODO make it safe
     # TODO make it fast
     # TODO make it pretty
-
-  handlers:
-    - name: update apt sources
-      command: apt-get update
-    - name: restart couchdb
-      service: name=couchdb state=restarted

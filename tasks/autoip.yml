@@ -1,0 +1,9 @@
+---
+- apt: pkg=avahi-autoipd state=present
+- lineinfile: dest=/etc/dhcp/dhclient.conf regexp="^#?timeout " line="timeout 10;"
+- lineinfile: dest=/etc/default/ifplugd regexp="^INTERFACES=" line="INTERFACES=eth0"
+  # XXX: figure out why this requires a reboot
+  # notify: restart ifplugd
+- lineinfile: dest=/etc/default/ifplugd regexp="^HOTPLUG_INTERFACES=" line="HOTPLUG_INTERFACES=eth0"
+  # XXX: figure out why this requires a reboot
+  # notify: restart ifplugd
