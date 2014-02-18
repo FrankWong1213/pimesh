@@ -12,8 +12,8 @@
     - include: tasks/firstboot.yml
     - include: tasks/packages.yml
     - include: tasks/networking.yml
-    # - include: tasks/cjdns.yml
-    # - include: tasks/couchdb.yml
+    - include: tasks/cjdns.yml
+    - include: tasks/couchdb.yml
     # - include: tasks/ruby.yml
 
     # TODO announce, replicate

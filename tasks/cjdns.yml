@@ -1,6 +1,6 @@
 ---
 - get_url: url=http://nodejs.org/dist/v0.10.24/node-v0.10.24-linux-arm-pi.tar.gz dest=/opt/
-- shell: tar -x -C /opt/ -f /opt/node-v0.10.24-linux-arm-pi.tar.gz && rm /usr/local/bin/node creates=/opt/node-v0.10.24-linux-arm-pi/
+- shell: tar -x -C /opt/ -f /opt/node-v0.10.24-linux-arm-pi.tar.gz creates=/opt/node-v0.10.24-linux-arm-pi/
 - shell: cp -R /opt/node-v0.10.24-linux-arm-pi/*/ /usr/local/ creates=/usr/local/bin/node
 
 - git: repo=https://github.com/voltz/nacl4raspi.git dest=/opt/nacl4raspi/ update=no
