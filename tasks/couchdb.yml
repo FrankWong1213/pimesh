@@ -1,7 +1,6 @@
 ---
 - apt: pkg=couchdb state=present
-# XXX ansible_tun0 fact might not yet have been gathered
-# - setup: filter=ansible_tun0
+- setup: filter=ansible_tun0
 - lineinfile: dest=/etc/couchdb/local.ini regexp='^;?bind_address' line="bind_address = {{ ansible_tun0.ipv6[0].address }}"
   register: restart_couchdb
 - service: name=couchdb state=restarted
